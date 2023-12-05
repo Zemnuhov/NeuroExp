@@ -1,10 +1,14 @@
+from pathlib import Path
 from tkinter import *
 from exp_setting import ExperimentSetting
 from PIL import ImageTk, Image
 import stimulus_type as s_type
+import time
 
 
 class Experiment(Tk):
+    __exp_result = []
+    __timer = time.time_ns()
 
     def __init__(self, setting: ExperimentSetting):
         super().__init__()
@@ -20,14 +24,20 @@ class Experiment(Tk):
 
     def __update(self):
         if self.current_item >= len(self.setting.stimulus):
-            self.current_item = 0
-        if isinstance(self.setting.stimulus[self.current_item], s_type.Text):
-            self.show_text_stimulus(self.setting.stimulus[self.current_item])
-        if isinstance(self.setting.stimulus[self.current_item], s_type.Image):
-            self.show_image_stimulus(self.setting.stimulus[self.current_item])
-        self.update()
-        self.after(self.setting.stimulus[self.current_item].delay, self.__update)
-        self.current_item += 1
+            print(self.__exp_result)
+            self.destroy()
+        else:
+            if isinstance(self.setting.stimulus[self.current_item], s_type.Text):
+                self.show_text_stimulus(self.setting.stimulus[self.current_item])
+            if isinstance(self.setting.stimulus[self.current_item], s_type.Image):
+                self.show_image_stimulus(self.setting.stimulus[self.current_item])
+            if isinstance(self.setting.stimulus[self.current_item], s_type.Choice):
+                self.__timer = time.time_ns()
+                self.show_choice_stimulus(self.setting.stimulus[self.current_item])
+            self.update()
+            if not isinstance(self.setting.stimulus[self.current_item], s_type.Choice):
+                self.after(self.setting.stimulus[self.current_item].delay, self.__update)
+            self.current_item += 1
 
     def show_image_stimulus(self, image_stimulus: s_type.Image):
         self.__clear_stack()
@@ -45,6 +55,35 @@ class Experiment(Tk):
         self.stimulus_stack.append(label)
         label.pack(expand=True)
 
+    def user_choice(self, variant: str):
+        stimulus = Path(self.setting.stimulus[self.current_item - 2].path).name if isinstance(
+            self.setting.stimulus[self.current_item - 2], (
+                s_type.Image,
+                s_type.Video,
+                s_type.Sound
+            )
+        ) else self.setting.stimulus[self.current_item - 2].value
+        self.__exp_result.append(
+            {
+                'stimulus': stimulus,
+                'choice': variant,
+                'reaction': time.time_ns() - self.__timer
+            }
+        )
+        self.__update()
+
+    def show_choice_stimulus(self, choice: s_type.Choice):
+        self.__clear_stack()
+        if isinstance(choice.choice_buttons, str) and choice.choice_buttons.lower() == 'mouse':
+            self.rowconfigure(index=0, weight=1)
+            for idx, item in enumerate(choice.variants):
+                self.columnconfigure(index=idx, weight=1)
+                label = Button(text=item, font='Arial 40', background=self.setting.background_color,
+                               command=lambda x=item: self.user_choice(x))
+                label.grid(column=idx, row=0, ipadx=40, ipady=40)
+                self.stimulus_stack.append(label)
+
     def __clear_stack(self):
         for stimulus in self.stimulus_stack:
             stimulus.forget()
+            stimulus.destroy()
