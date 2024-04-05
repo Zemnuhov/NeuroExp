@@ -1,9 +1,14 @@
 from pathlib import Path
 from tkinter import *
+
+import cv2
+
 from exp_setting import ExperimentSetting
 from PIL import ImageTk, Image
 import stimulus_type as s_type
 import time
+
+from neuroexplib.parallel_port import ParallelInpOut
 
 
 class Experiment(Tk):
@@ -12,6 +17,7 @@ class Experiment(Tk):
 
     def __init__(self, setting: ExperimentSetting):
         super().__init__()
+        self.parallel = ParallelInpOut(address=setting.parallel_port_address)
         self.img = None
         self.current_item = 0
         self.setting = setting
@@ -27,16 +33,22 @@ class Experiment(Tk):
             print(self.__exp_result)
             self.destroy()
         else:
-            if isinstance(self.setting.stimulus[self.current_item], s_type.Text):
-                self.show_text_stimulus(self.setting.stimulus[self.current_item])
-            if isinstance(self.setting.stimulus[self.current_item], s_type.Image):
-                self.show_image_stimulus(self.setting.stimulus[self.current_item])
-            if isinstance(self.setting.stimulus[self.current_item], s_type.Choice):
+            item = self.setting.stimulus[self.current_item]
+            if isinstance(item, s_type.Text):
+                self.show_text_stimulus(item)
+            if isinstance(item, s_type.Image):
+                self.show_image_stimulus(item)
+            if isinstance(item, s_type.Choice):
                 self.__timer = time.time_ns()
-                self.show_choice_stimulus(self.setting.stimulus[self.current_item])
+                self.show_choice_stimulus(item)
+            if isinstance(item, s_type.Video):
+                self.show_video_stimulus(item)
             self.update()
-            if not isinstance(self.setting.stimulus[self.current_item], s_type.Choice):
-                self.after(self.setting.stimulus[self.current_item].delay, self.__update)
+            if not isinstance(
+                    item,
+                    (s_type.Choice, s_type.Video)
+            ) or (isinstance(item, s_type.Video) and not item.play_to_end):
+                self.after(item.delay, self.__update)
             self.current_item += 1
 
     def show_image_stimulus(self, image_stimulus: s_type.Image):
@@ -82,6 +94,32 @@ class Experiment(Tk):
                                command=lambda x=item: self.user_choice(x))
                 label.grid(column=idx, row=0, ipadx=40, ipady=40)
                 self.stimulus_stack.append(label)
+
+    def show_video_stimulus(self, video_stimulus: s_type.Video):
+
+        def __convert_frame_to_image(frame):
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame)
+            photo = ImageTk.PhotoImage(image=img)
+            return photo
+
+        def __play_video(canvas: Canvas, video: cv2.VideoCapture):
+            ret, frame = video.read()
+            if ret:
+                self.img = __convert_frame_to_image(frame)
+                canvas.create_image(0, 0, image=self.img, anchor=NW)
+                self.after(75, lambda x=canvas, y=video: __play_video(x, y))
+            else:
+                self.after(0, self.__update)
+
+        self.__clear_stack()
+        vid = cv2.VideoCapture(video_stimulus.path)
+        canvas = Canvas(self, height=vid.get(cv2.CAP_PROP_FRAME_HEIGHT), width=vid.get(cv2.CAP_PROP_FRAME_WIDTH))
+        canvas.pack(expand=True)
+        self.stimulus_stack.append(canvas)
+        vid = cv2.VideoCapture(video_stimulus.path)
+        self.parallel.setData(self.current_item)
+        __play_video(canvas, vid)
 
     def __clear_stack(self):
         for stimulus in self.stimulus_stack:
