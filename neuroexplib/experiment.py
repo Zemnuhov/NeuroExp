@@ -3,9 +3,9 @@ from tkinter import *
 
 import cv2
 
-from exp_setting import ExperimentSetting
+from neuroexplib.exp_setting import ExperimentSetting
 from PIL import ImageTk, Image
-import stimulus_type as s_type
+import neuroexplib.stimulus_type as s_type
 import time
 
 from neuroexplib.parallel_port import ParallelInpOut
@@ -20,6 +20,7 @@ class Experiment(Tk):
         self.parallel = ParallelInpOut(address=setting.parallel_port_address)
         self.img = None
         self.current_item = 0
+        self.stimulus_count = 0
         self.setting = setting
         self.bind('<Escape>', lambda x: self.destroy())
         self.attributes("-fullscreen", True)
@@ -36,13 +37,16 @@ class Experiment(Tk):
             item = self.setting.stimulus[self.current_item]
             if isinstance(item, s_type.Text):
                 self.show_text_stimulus(item)
+                self.stimulus_count += 1
             if isinstance(item, s_type.Image):
                 self.show_image_stimulus(item)
+                self.stimulus_count += 1
             if isinstance(item, s_type.Choice):
                 self.__timer = time.time_ns()
                 self.show_choice_stimulus(item)
             if isinstance(item, s_type.Video):
                 self.show_video_stimulus(item)
+                self.stimulus_count += 1
             self.update()
             if not isinstance(
                     item,
@@ -58,12 +62,14 @@ class Experiment(Tk):
         canvas_label.pack(expand=True)
         self.img = ImageTk.PhotoImage(pil_img)
         canvas_label.create_image(0, 0, anchor=NW, image=self.img)
+        self.parallel.setData(self.stimulus_count)
         self.stimulus_stack.append(canvas_label)
 
     def show_text_stimulus(self, text_stimulus: s_type.Text):
         self.__clear_stack()
         label = Label(text=text_stimulus.value, background=self.setting.background_color,
                       foreground=text_stimulus.text_color, font=text_stimulus.font)
+        self.parallel.setData(self.stimulus_count)
         self.stimulus_stack.append(label)
         label.pack(expand=True)
 
@@ -118,7 +124,7 @@ class Experiment(Tk):
         canvas.pack(expand=True)
         self.stimulus_stack.append(canvas)
         vid = cv2.VideoCapture(video_stimulus.path)
-        self.parallel.setData(self.current_item)
+        self.parallel.setData(self.stimulus_count)
         __play_video(canvas, vid)
 
     def __clear_stack(self):

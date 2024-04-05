@@ -1,5 +1,5 @@
 from typing import *
-from stimulus_type import *
+from neuroexplib.stimulus_type import *
 
 
 class ExperimentSetting:
