@@ -35,9 +35,9 @@ class ParallelInpOut:
             self.base = address
 
         if platform.architecture()[0] == '32bit':
-            self.port = getattr(windll, 'inpout32')
+            self.port = getattr(windll, './inpout32.dll')
         elif platform.architecture()[0] == '64bit':
-            self.port = getattr(windll, 'C:/Users/user/PycharmProjects/pythonProject2/inpoutx64.dll')
+            self.port = getattr(windll, './inpoutx64.dll')
 
         BYTEMODEMASK = uint8(1 << 5 | 1 << 6 | 1 << 7)
 

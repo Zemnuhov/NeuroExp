@@ -6,7 +6,7 @@ if __name__ == '__main__':
     app = Experiment(
         ExperimentSetting(
             stimulus=[
-                Text(1000, 'Тут описание экспиремента', 'white'),
+                Text(1000, '+', 'white'),
                 Video(1000, path='C:/Presentation/Stimuls/21.mp4', play_to_end=True),
                 Choice(10000, ['-3', '-2', '-1', '0', '1', '2', '3'], 'mouse'),
                 Image(5000, path="C:/Presentation/Stimuls/1.jpg"),
