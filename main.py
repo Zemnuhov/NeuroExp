@@ -7,13 +7,13 @@ if __name__ == '__main__':
         ExperimentSetting(
             stimulus=[
                 Text(1000, '+', 'white'),
-                Video(1000, path='C:/Presentation/Stimuls/21.mp4', play_to_end=True),
+                Video(1000, path='D:\Presentation\Stimuls/21.mp4', play_to_end=True),
                 Choice(10000, ['-3', '-2', '-1', '0', '1', '2', '3'], 'mouse'),
-                Image(5000, path="C:/Presentation/Stimuls/1.jpg"),
+                Image(5000, path="D:\Presentation\Stimuls/1.jpg"),
                 Choice(10000, ['-3', '-2', '-1', '0', '1', '2', '3'], 'mouse'),
-                Image(5000, path="C:/Presentation/Stimuls/2.jpg"),
+                Image(5000, path="D:\Presentation\Stimuls/2.jpg"),
                 Choice(10000, ['-3', '-2', '-1', '0', '1', '2', '3'], 'mouse'),
-                Image(5000, path="C:/Presentation/Stimuls/3.jpg"),
+                Image(5000, path="D:\Presentation\Stimuls/3.jpg"),
                 Choice(10000, ['-3', '-2', '-1', '0', '1', '2', '3'], 'mouse'),
             ],
             default_delay=500,

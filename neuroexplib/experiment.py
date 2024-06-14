@@ -1,19 +1,16 @@
+from datetime import datetime
 from pathlib import Path
 from tkinter import *
-
 import cv2
-
 from neuroexplib.exp_setting import ExperimentSetting
 from PIL import ImageTk, Image
 import neuroexplib.stimulus_type as s_type
-import time
-
 from neuroexplib.parallel_port import ParallelInpOut
 
 
 class Experiment(Tk):
     __exp_result = []
-    __timer = time.time_ns()
+    __timer = datetime.now()
 
     def __init__(self, setting: ExperimentSetting):
         super().__init__()
@@ -42,7 +39,7 @@ class Experiment(Tk):
                 self.show_image_stimulus(item)
                 self.stimulus_count += 1
             if isinstance(item, s_type.Choice):
-                self.__timer = time.time_ns()
+                self.__timer = datetime.now()
                 self.show_choice_stimulus(item)
             if isinstance(item, s_type.Video):
                 self.show_video_stimulus(item)
@@ -85,7 +82,7 @@ class Experiment(Tk):
             {
                 'stimulus': stimulus,
                 'choice': variant,
-                'reaction': time.time_ns() - self.__timer
+                'reaction': str(datetime.now() - self.__timer)
             }
         )
         self.__update()

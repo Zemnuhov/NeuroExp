@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuroexplib"
+version = "0.1.0"
+dependencies = [
+    "opencv-python>=4.7.0.72",
+    "pillow>=10.3.0",
+    "numpy>=1.25.2",
+]
+requires-python = ">=3.8"
+authors = [
+    { name = "Zemnuhov Egor", email = "zemnuhov2405@gmail.com" },
+]
+description = "Preprocessing of histological images"
+readme = "README.md"
+license = { text = "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"}
+keywords = ["histology", "openslide", "cucim"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://example.com"
+Documentation = "https://readthedocs.org"
+Repository = "https://github.com/Zemnuhov/NeuroExp/tree/main"

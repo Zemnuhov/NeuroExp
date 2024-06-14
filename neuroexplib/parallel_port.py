@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import time
+from pathlib import Path
 
 
 # We deliberately delay importing the inpout32 or inpoutx64 module until we try
@@ -35,9 +36,10 @@ class ParallelInpOut:
             self.base = address
 
         if platform.architecture()[0] == '32bit':
-            self.port = getattr(windll, './inpout32.dll')
+            self.port = getattr(windll, str(Path.cwd() / "inpout32.dll"))
         elif platform.architecture()[0] == '64bit':
-            self.port = getattr(windll, './inpoutx64.dll')
+            print(Path.cwd())
+            self.port = getattr(windll, str(Path.cwd() / "inpoutx64.dll"))
 
         BYTEMODEMASK = uint8(1 << 5 | 1 << 6 | 1 << 7)
 
