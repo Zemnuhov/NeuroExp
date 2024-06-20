@@ -4,8 +4,10 @@ from tkinter import *
 import cv2
 from neuroexplib.exp_setting import ExperimentSetting
 from PIL import ImageTk, Image
-import neuroexplib.stimulus_type as s_type
-from neuroexplib.parallel_port import ParallelInpOut
+from neuroexplib.stimulus_type import *
+from neuroexplib.trigger.com_port import COMPort
+from neuroexplib.trigger.parallel_port import ParallelPort
+from neuroexplib.trigger.trigger import Trigger
 
 
 class Experiment(Tk):
@@ -14,12 +16,16 @@ class Experiment(Tk):
 
     def __init__(self, setting: ExperimentSetting):
         super().__init__()
-        self.parallel = ParallelInpOut(address=setting.parallel_port_address)
+        self.parallel: Trigger = (
+            COMPort(port=setting.parallel_port_address)
+            if "COM" in setting.parallel_port_address
+            else ParallelPort(port=setting.parallel_port_address)
+        )
         self.img = None
         self.current_item = 0
         self.stimulus_count = 0
         self.setting = setting
-        self.bind('<Escape>', lambda x: self.destroy())
+        self.bind("<Escape>", lambda x: self.destroy())
         self.attributes("-fullscreen", True)
         self.configure(bg=self.setting.background_color)
         self.stimulus_stack = []
@@ -32,73 +38,97 @@ class Experiment(Tk):
             self.destroy()
         else:
             item = self.setting.stimulus[self.current_item]
-            if isinstance(item, s_type.Text):
+            if isinstance(item, TextStimulus):
                 self.show_text_stimulus(item)
                 self.stimulus_count += 1
-            if isinstance(item, s_type.Image):
+            if isinstance(item, ImageStimulus):
                 self.show_image_stimulus(item)
                 self.stimulus_count += 1
-            if isinstance(item, s_type.Choice):
+            if isinstance(item, ChoiceStimulus):
                 self.__timer = datetime.now()
                 self.show_choice_stimulus(item)
-            if isinstance(item, s_type.Video):
+            if isinstance(item, VideoStimulus):
                 self.show_video_stimulus(item)
                 self.stimulus_count += 1
+            if isinstance(
+                item, (ImageStimulus, VideoStimulus, SoundStimulus, TextStimulus)
+            ):
+                if item.trigger_type is not None:
+                    self.parallel.set_data(item.trigger_type.value)
             self.update()
-            if not isinstance(
-                    item,
-                    (s_type.Choice, s_type.Video)
-            ) or (isinstance(item, s_type.Video) and not item.play_to_end):
+            if not isinstance(item, (ChoiceStimulus, VideoStimulus)) or (
+                isinstance(item, VideoStimulus) and not item.play_to_end
+            ):
                 self.after(item.delay, self.__update)
             self.current_item += 1
 
-    def show_image_stimulus(self, image_stimulus: s_type.Image):
+    def show_image_stimulus(self, image_stimulus: ImageStimulus):
         self.__clear_stack()
         pil_img = Image.open(image_stimulus.path)
-        canvas_label = Canvas(self, width=pil_img.width, height=pil_img.height, bg=self.setting.background_color)
+        canvas_label = Canvas(
+            self,
+            width=pil_img.width,
+            height=pil_img.height,
+            bg=self.setting.background_color,
+        )
         canvas_label.pack(expand=True)
         self.img = ImageTk.PhotoImage(pil_img)
         canvas_label.create_image(0, 0, anchor=NW, image=self.img)
-        self.parallel.setData(self.stimulus_count)
+        self.parallel.set_data(self.stimulus_count)
         self.stimulus_stack.append(canvas_label)
 
-    def show_text_stimulus(self, text_stimulus: s_type.Text):
+    def show_text_stimulus(self, text_stimulus: TextStimulus):
         self.__clear_stack()
-        label = Label(text=text_stimulus.value, background=self.setting.background_color,
-                      foreground=text_stimulus.text_color, font=text_stimulus.font)
-        self.parallel.setData(self.stimulus_count)
+        label = Label(
+            text=text_stimulus.value,
+            background=self.setting.background_color,
+            foreground=text_stimulus.text_color,
+            font=text_stimulus.font,
+        )
+        self.parallel.set_data(self.stimulus_count)
         self.stimulus_stack.append(label)
         label.pack(expand=True)
 
     def user_choice(self, variant: str):
-        stimulus = Path(self.setting.stimulus[self.current_item - 2].path).name if isinstance(
-            self.setting.stimulus[self.current_item - 2], (
-                s_type.Image,
-                s_type.Video,
-                s_type.Sound
+        stimulus = (
+            Path(self.setting.stimulus[self.current_item - 2].path).name
+            if isinstance(
+                self.setting.stimulus[self.current_item - 2],
+                (ImageStimulus, VideoStimulus, SoundStimulus),
             )
-        ) else self.setting.stimulus[self.current_item - 2].value
+            else self.setting.stimulus[self.current_item - 2].value
+        )
         self.__exp_result.append(
             {
-                'stimulus': stimulus,
-                'choice': variant,
-                'reaction': str(datetime.now() - self.__timer)
+                "stimulus": stimulus,
+                "choice": variant,
+                "reaction": str(datetime.now() - self.__timer),
+                "trigger_type": str(
+                    self.setting.stimulus[self.current_item - 2].trigger_type
+                ),
             }
         )
         self.__update()
 
-    def show_choice_stimulus(self, choice: s_type.Choice):
+    def show_choice_stimulus(self, choice: ChoiceStimulus):
         self.__clear_stack()
-        if isinstance(choice.choice_buttons, str) and choice.choice_buttons.lower() == 'mouse':
+        if (
+            isinstance(choice.choice_buttons, str)
+            and choice.choice_buttons.lower() == "mouse"
+        ):
             self.rowconfigure(index=0, weight=1)
             for idx, item in enumerate(choice.variants):
                 self.columnconfigure(index=idx, weight=1)
-                label = Button(text=item, font='Arial 40', background=self.setting.background_color,
-                               command=lambda x=item: self.user_choice(x))
+                label = Button(
+                    text=item,
+                    font="Arial 40",
+                    background=self.setting.background_color,
+                    command=lambda x=item: self.user_choice(x),
+                )
                 label.grid(column=idx, row=0, ipadx=40, ipady=40)
                 self.stimulus_stack.append(label)
 
-    def show_video_stimulus(self, video_stimulus: s_type.Video):
+    def show_video_stimulus(self, video_stimulus: VideoStimulus):
 
         def __convert_frame_to_image(frame):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -117,11 +147,15 @@ class Experiment(Tk):
 
         self.__clear_stack()
         vid = cv2.VideoCapture(video_stimulus.path)
-        canvas = Canvas(self, height=vid.get(cv2.CAP_PROP_FRAME_HEIGHT), width=vid.get(cv2.CAP_PROP_FRAME_WIDTH))
+        canvas = Canvas(
+            self,
+            height=vid.get(cv2.CAP_PROP_FRAME_HEIGHT),
+            width=vid.get(cv2.CAP_PROP_FRAME_WIDTH),
+        )
         canvas.pack(expand=True)
         self.stimulus_stack.append(canvas)
         vid = cv2.VideoCapture(video_stimulus.path)
-        self.parallel.setData(self.stimulus_count)
+        self.parallel.set_data(self.stimulus_count)
         __play_video(canvas, vid)
 
     def __clear_stack(self):
