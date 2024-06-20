@@ -8,6 +8,7 @@ from neuroexplib.stimulus_type import *
 from neuroexplib.trigger.com_port import COMPort
 from neuroexplib.trigger.parallel_port import ParallelPort
 from neuroexplib.trigger.trigger import Trigger
+import time
 
 
 class Experiment(Tk):
@@ -18,9 +19,10 @@ class Experiment(Tk):
         super().__init__()
         self.parallel: Trigger = (
             COMPort(port=setting.parallel_port_address)
-            if "COM" in setting.parallel_port_address
+            if isinstance(setting.parallel_port_address, str)
             else ParallelPort(port=setting.parallel_port_address)
         )
+        self.parallel.set_data(100)
         self.img = None
         self.current_item = 0
         self.stimulus_count = 0
@@ -74,7 +76,7 @@ class Experiment(Tk):
         canvas_label.pack(expand=True)
         self.img = ImageTk.PhotoImage(pil_img)
         canvas_label.create_image(0, 0, anchor=NW, image=self.img)
-        self.parallel.set_data(self.stimulus_count)
+        self.parallel.set_data(self.stimulus_count+1)
         self.stimulus_stack.append(canvas_label)
 
     def show_text_stimulus(self, text_stimulus: TextStimulus):
@@ -85,7 +87,7 @@ class Experiment(Tk):
             foreground=text_stimulus.text_color,
             font=text_stimulus.font,
         )
-        self.parallel.set_data(self.stimulus_count)
+        self.parallel.set_data(self.stimulus_count+1)
         self.stimulus_stack.append(label)
         label.pack(expand=True)
 
@@ -155,7 +157,7 @@ class Experiment(Tk):
         canvas.pack(expand=True)
         self.stimulus_stack.append(canvas)
         vid = cv2.VideoCapture(video_stimulus.path)
-        self.parallel.set_data(self.stimulus_count)
+        self.parallel.set_data(self.stimulus_count+1)
         __play_video(canvas, vid)
 
     def __clear_stack(self):

@@ -2,6 +2,7 @@ from pathlib import Path
 from numpy import uint8
 from ctypes import windll
 import platform
+import time
 
 from neuroexplib.trigger.trigger import Trigger
 
@@ -27,6 +28,7 @@ class ParallelPort(Trigger):
 
     def set_data(self, data):
         self.port.Out32(self.base, data)
+        time.sleep(0.01)
 
     def set_pin(self, pinNumber, state):
         _inp = self.port.Inp32(self.base)
@@ -61,3 +63,12 @@ class ParallelPort(Trigger):
         else:
             msg = "Pin %i cannot be read (by PParallelInpOut32.readPin())"
             print(msg % pinNumber)
+
+
+if __name__ == '__main__':
+    import time
+    parallel = ParallelPort(0x3EFC)
+    for i in range(10):
+        parallel.set_data(255)
+        parallel.set_data(i)
+
