@@ -36,7 +36,7 @@ class Experiment(Tk):
 
     def __update(self):
         if self.current_item >= len(self.setting.stimulus):
-            print(self.__exp_result)
+            self.save_experiment_result()
             self.destroy()
         else:
             item = self.setting.stimulus[self.current_item]
@@ -98,7 +98,7 @@ class Experiment(Tk):
                 self.setting.stimulus[self.current_item - 2],
                 (ImageStimulus, VideoStimulus, SoundStimulus),
             )
-            else self.setting.stimulus[self.current_item - 2].value
+            else Path(self.setting.stimulus[self.current_item - 3].path).name
         )
         self.__exp_result.append(
             {
@@ -107,6 +107,11 @@ class Experiment(Tk):
                 "reaction": str(datetime.now() - self.__timer),
                 "trigger_type": str(
                     self.setting.stimulus[self.current_item - 2].trigger_type
+                    if isinstance(
+                        self.setting.stimulus[self.current_item - 2],
+                        (ImageStimulus, VideoStimulus, SoundStimulus),
+                    )
+                    else self.setting.stimulus[self.current_item - 3].trigger_type
                 ),
             }
         )
@@ -164,3 +169,12 @@ class Experiment(Tk):
         for stimulus in self.stimulus_stack:
             stimulus.forget()
             stimulus.destroy()
+
+    def save_experiment_result(self):
+        with open(f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_result.txt", "w", encoding="utf-8") as f:
+            for item in self.__exp_result:
+                f.write(f"Стимул: {item["stimulus"]}\n")
+                f.write(f"Выбор: {item["choice"]}\n")
+                f.write(f"Скорость реакции: {item["reaction"]}\n")
+                f.write(f"Тип триггера: {item["trigger_type"]}\n")
+                f.write("-"*20+"\n")
